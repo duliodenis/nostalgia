@@ -10,4 +10,9 @@ import UIKit
 
 class PermissionViewController: UIViewController {
 
+    @IBOutlet weak var helpLabel: UILabel!
+    
+    @IBAction func requestPermissions(_ sender: Any) {
+        
+    }
 }
