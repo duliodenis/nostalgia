@@ -3,7 +3,7 @@ nos·tal·gia
 
 a sentimental longing or wistful affection for the past, typically for a period or place with happy personal associations.
 
-![](art/screenshot/nostalgia01.gif?raw=true)
+![](art/screenshot/nostalgia02.gif?raw=true)
 
 Nostalgia is delicate but potent. From the Greek Nostalgia means a pain from an old wound. Its a twinge in your heart far more powerful than memory alone. This App is a Time Machine. It goes backwards and forwards. Taking us to a place where we ache to go again. 
 
