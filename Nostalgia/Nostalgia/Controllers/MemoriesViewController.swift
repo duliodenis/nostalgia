@@ -22,6 +22,9 @@ class MemoriesViewController: UICollectionViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        // add a nav bar button to add a photo
+        navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(addPhoto))
+        
         loadMemories()
     }
     
@@ -63,7 +66,7 @@ class MemoriesViewController: UICollectionViewController {
     }
     
     
-    // MARK: - Load Memories Function
+    // MARK: - Load and Save Memories Functions
     
     func loadMemories() {
         memories.removeAll()
@@ -91,5 +94,86 @@ class MemoriesViewController: UICollectionViewController {
         // reload the list of memories
         collectionView?.reloadSections(IndexSet(integer: 1))
     }
+    
+    
+    func saveNewMemory(image: UIImage) {
+        // create a unique name for the memory using seconds
+        let memoryName = "memory-\(Date().timeIntervalSince1970)"
+        
+        // use the unique name to create filenames for the full size image and thumbnail
+        let imageName = memoryName + ".jpg"
+        let thumbnailName = memoryName + ".thumb"
+        
+        do {
+            // create a URL where we can write a jpg to
+            let imagePath = getDocumentsDirectory().appendingPathComponent(imageName)
+            
+            // convert the UIImage to a JPEG data object
+            if let jpegData = UIImageJPEGRepresentation(image, 80) {
+                // write data to URL we created
+                try jpegData.write(to: imagePath, options: [.atomicWrite])
+            }
+            // create thumbnail
+            if let thumbnail = resize(image: image, to: 200) {
+                let imagePath = getDocumentsDirectory().appendingPathComponent(thumbnailName)
+                if let jpegData = UIImageJPEGRepresentation(thumbnail, 80) {
+                    try jpegData.write(to: imagePath, options: [.atomicWrite])
+                }
+            }
+            
+        } catch {
+            print("saveMemory: Failed to write to disk.")
+        }
+    }
+    
+    
+    // MARK: - Add Photo Function
+    
+    func addPhoto() {
+        let vc = UIImagePickerController()
+        vc.modalPresentationStyle = .formSheet
+        vc.delegate = self
+        navigationController?.present(vc, animated: true)
+    }
+    
+    
+    // MARK: - Resize Photo Helper Method
+    
+    func resize(image: UIImage, to width: CGFloat) -> UIImage? {
+        // calculate how much we need to bring our width size to match our target size
+        let scale = width / image.size.width
+        
+        // bring the height down by the same amount to preserve the aspect ratio
+        let height = image.size.height * scale
+        
+        // create a new image context we can draw into
+        UIGraphicsBeginImageContextWithOptions(CGSize(width: width, height: height), false, 0)
+        
+        // draw the original image into the context
+        image.draw(in: CGRect(x: 0, y:0, width: width, height: height))
+        
+        // pull out the resized version
+        let newImage = UIGraphicsGetImageFromCurrentImageContext()
+        
+        // end the context so UIKit can clean up
+        UIGraphicsEndImageContext()
+        
+        // return resized image
+        return newImage
+    }
 
+}
+
+
+extension MemoriesViewController: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+    
+    func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [String : Any]) {
+        dismiss(animated: true)
+        
+        if let possibleImage = info[UIImagePickerControllerOriginalImage] as? UIImage {
+            saveNewMemory(image: possibleImage)
+            loadMemories()
+        }
+    }
+    
 }
