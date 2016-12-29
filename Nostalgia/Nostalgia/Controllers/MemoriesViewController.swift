@@ -15,6 +15,8 @@ class MemoriesViewController: UICollectionViewController {
     
     // array of URLs for the memories
     var memories = [URL]()
+    // the active memory
+    var activeMemory: URL!
     
     
     // MARK: - View Lifecycle
@@ -162,6 +164,19 @@ class MemoriesViewController: UICollectionViewController {
         
         cell.imageView.image = image
         
+        // check to see if the cell's gesture recognizer is nil
+        if cell.gestureRecognizers == nil {
+            // if it is add a long press recognizer to record narration
+            let recognizer = UILongPressGestureRecognizer(target: self, action: #selector(memoryLongPress))
+            recognizer.minimumPressDuration = 0.25
+            cell.addGestureRecognizer(recognizer)
+            
+            // set the cell's border properties
+            cell.layer.borderColor = UIColor.white.cgColor
+            cell.layer.borderWidth = 3
+            cell.layer.cornerRadius = 10
+        }
+        
         return cell
     }
     
@@ -214,9 +229,56 @@ class MemoriesViewController: UICollectionViewController {
         // return resized image
         return newImage
     }
+    
+    
+    // MARK: - Voice Recording Methods
+    
+    // Called from the long press gesture from a Collection View Cell
+    
+    func memoryLongPress(sender: UILongPressGestureRecognizer) {
+        // if we have just started long pressing
+        if sender.state == .began {
+            // get the collection view cell
+            let cell = sender.view as! MemoryCell
+            
+            // and derive the index
+            if let index = collectionView?.indexPath(for: cell) {
+                // to set the active memory variable
+                activeMemory = memories[index.row]
+                // and start recording
+                recordNarration()
+            }
+        } else if sender.state == .ended {
+            // if on the other hand we ended recording - call the finish recording method
+            finishRecording(success: true)
+        }
+    }
+    
+    
+    // Called to record the audio narration through the microphone
+    
+    func recordNarration() {
+        print("recording narration...")
+    }
+    
+    
+    // Called when recording is finished and responsible for linking the recording to the memory
+    
+    func finishRecording(success: Bool) {
+        print("...finished recording narration.")
+    }
+    
+    
+    // Responsible for transcribing narration into text and linking to the memory
+    
+    func transcribeAudio(memory: URL) {
+        print("transcribing audio.")
+    }
 
 }
 
+
+// MARK: - Image Picker Controller Delegate / Navigation Controller Delegate Methods
 
 extension MemoriesViewController: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
     
@@ -231,6 +293,8 @@ extension MemoriesViewController: UIImagePickerControllerDelegate, UINavigationC
     
 }
 
+
+// MARK: - Collection View Flow Layout Delegate Methods
 
 extension MemoriesViewController: UICollectionViewDelegateFlowLayout {
     
