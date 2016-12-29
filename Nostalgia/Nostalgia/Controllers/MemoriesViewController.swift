@@ -137,6 +137,59 @@ class MemoriesViewController: UICollectionViewController {
     }
     
     
+    // MARK: - UICollectionView Delegate Methods
+    
+    override func numberOfSections(in collectionView: UICollectionView) -> Int {
+        return 2 // one for the search and one for the memories
+    }
+    
+    
+    override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        if section == 0 {
+            return 0
+        } else {
+            return memories.count
+        }
+    }
+    
+    
+    override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "Memory", for: indexPath) as! MemoryCell
+        
+        let memory = memories[indexPath.row]
+        let imageName = thumbnailURL(for: memory).path
+        let image = UIImage.init(contentsOfFile: imageName)
+        
+        cell.imageView.image = image
+        
+        return cell
+    }
+    
+    
+    override func collectionView(_ collectionView: UICollectionView, viewForSupplementaryElementOfKind kind: String, at indexPath: IndexPath) -> UICollectionReusableView {
+        return collectionView.dequeueReusableSupplementaryView(ofKind: kind, withReuseIdentifier: "Header", for: indexPath)
+    }
+    
+    
+    // MARK: - Memory URL Helper Methods
+    
+    func imageURL(for memory: URL) -> URL {
+        return memory.appendingPathExtension("jpg")
+    }
+    
+    func thumbnailURL(for memory: URL) -> URL {
+        return memory.appendingPathExtension("thumb")
+    }
+    
+    func audioURL(for memory: URL) -> URL {
+        return memory.appendingPathExtension("m4a")
+    }
+    
+    func transcriptionURL(for memory: URL) -> URL {
+        return memory.appendingPathExtension("txt")
+    }
+    
+    
     // MARK: - Resize Photo Helper Method
     
     func resize(image: UIImage, to width: CGFloat) -> UIImage? {
@@ -173,6 +226,19 @@ extension MemoriesViewController: UIImagePickerControllerDelegate, UINavigationC
         if let possibleImage = info[UIImagePickerControllerOriginalImage] as? UIImage {
             saveNewMemory(image: possibleImage)
             loadMemories()
+        }
+    }
+    
+}
+
+
+extension MemoriesViewController: UICollectionViewDelegateFlowLayout {
+    
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, referenceSizeForHeaderInSection section: Int) -> CGSize {
+        if section == 1 {
+            return CGSize.zero
+        } else {
+            return CGSize(width: 0, height: 50)
         }
     }
     
