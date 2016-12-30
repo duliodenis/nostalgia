@@ -17,6 +17,10 @@ class MemoriesViewController: UICollectionViewController {
     var memories = [URL]()
     // the active memory
     var activeMemory: URL!
+    // the AV Audio Recorder
+    var audioRecorder: AVAudioRecorder?
+    // the URL of the file used to record to
+    var recordingURL: URL!
     
     
     // MARK: - View Lifecycle
@@ -26,6 +30,9 @@ class MemoriesViewController: UICollectionViewController {
         
         // add a nav bar button to add a photo
         navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(addPhoto))
+        
+        // set-up the recording file URL
+        recordingURL = getDocumentsDirectory().appendingPathComponent("recording.m4a")
         
         loadMemories()
     }
@@ -258,14 +265,61 @@ class MemoriesViewController: UICollectionViewController {
     // Called to record the audio narration through the microphone
     
     func recordNarration() {
-        print("recording narration...")
+        // set the background color to RED to indicate recording is ON
+        collectionView?.backgroundColor = UIColor(red: 0.5, green: 0, blue: 0, alpha: 1)
+        
+        let recordingSession = AVAudioSession.sharedInstance()
+        
+        do {
+            // configure the session for recording and playback through the speaker
+            try recordingSession.setCategory(AVAudioSessionCategoryPlayAndRecord, with: .defaultToSpeaker)
+            
+            // set-up a high quality recording session settings
+            let settings = [AVFormatIDKey: Int(kAudioFormatMPEG4AAC),                   // MP4 AAC
+                            AVSampleRateKey: 44100,                                     // 44.1KHz
+                            AVNumberOfChannelsKey: 2,                                   // Stereo
+                            AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue]     // HQ Encoding
+            
+            // create the audio recording and assign ourself as the delegate
+            audioRecorder = try AVAudioRecorder(url: recordingURL, settings: settings)
+            audioRecorder?.delegate = self
+            audioRecorder?.record()
+        } catch let error {
+            print("record narration: Error. Failed to record: \(error)")
+            finishRecording(success: false)
+        }
     }
     
     
     // Called when recording is finished and responsible for linking the recording to the memory
     
     func finishRecording(success: Bool) {
-        print("...finished recording narration.")
+        // set the background color back to indicate recording is OFF
+        collectionView?.backgroundColor = UIColor.darkGray
+        
+        // stop the recording
+        audioRecorder?.stop()
+        
+        if success {
+            do {
+                // create a URL out of the active memory URL + m4a extension
+                let audioMemoryURL = activeMemory.appendingPathComponent("m4a")
+                let fm = FileManager.default
+                
+                // delete existing recordings
+                if fm.fileExists(atPath: audioMemoryURL.path) {
+                    try fm.removeItem(at: audioMemoryURL)
+                }
+                
+                // move recorded file into the audio memory URL
+                try fm.moveItem(at: recordingURL, to: audioMemoryURL)
+                
+                // kick-off the transcription
+                transcriptionURL(for: audioMemoryURL)
+            } catch let error {
+                print("Failure Finishing Recording: \(error)")
+            }
+        }
     }
     
     
@@ -304,6 +358,17 @@ extension MemoriesViewController: UICollectionViewDelegateFlowLayout {
         } else {
             return CGSize(width: 0, height: 50)
         }
+    }
+    
+}
+
+
+// MARK: - AV Audio Recording Delegate Methods
+
+extension MemoriesViewController: AVAudioRecorderDelegate {
+    
+    func audioRecorderDidFinishRecording(_ recorder: AVAudioRecorder, successfully flag: Bool) {
+        finishRecording(success: false)
     }
     
 }
