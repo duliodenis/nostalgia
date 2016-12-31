@@ -7,9 +7,12 @@
 //
 
 import UIKit
-import AVFoundation // Microphone Access
-import Photos       // Photo Library Access
-import Speech       // Speech Transcription
+import AVFoundation         // Microphone Access
+import Photos               // Photo Library Access
+import Speech               // Speech Transcription
+
+import CoreSpotlight        // Spotlight Framework
+import MobileCoreServices   // Data Types needed for Spotlight
 
 
 class MemoriesViewController: UICollectionViewController {
@@ -381,9 +384,38 @@ class MemoriesViewController: UICollectionViewController {
                 // and write it to disk with the correct filename for memory linking
                 do {
                     try text.write(to: transcription, atomically: true, encoding: .utf8)
+                    // index the text by pushing the transcription into Spotlight
+                    self.indexMemory(memory: memory, text: text)
                 } catch {
                     print("Save Transcription Error.")
                 }
+            }
+        }
+    }
+    
+    
+    // MARK: - Spotlight Index Method
+    
+    func indexMemory(memory: URL, text: String) {
+        // create a searchable item attribute set 
+        let attributeSet = CSSearchableItemAttributeSet(itemContentType: kUTTypeText as String)
+        
+        attributeSet.title = "Nostalgic Memory"
+        attributeSet.contentDescription = text
+        attributeSet.thumbnailURL = thumbnailURL(for: memory)
+        
+        // wrap it in a searchable item using the memory's full path as it's unique identifier
+        let item = CSSearchableItem(uniqueIdentifier: memory.path, domainIdentifier: "co.ddapps", attributeSet: attributeSet)
+        
+        // make it unexpirable
+        item.expirationDate = Date.distantFuture
+        
+        // let Spotlight index the item
+        CSSearchableIndex.default().indexSearchableItems([item]) { error in
+            if let error = error {
+                print("Indexing Error: \(error.localizedDescription)")
+            } else {
+                print("Search item successfully indexed: \(text)")
             }
         }
     }
