@@ -170,6 +170,7 @@ class MemoriesViewController: UICollectionViewController {
         let image = UIImage.init(contentsOfFile: imageName)
         
         cell.imageView.image = image
+        cell.imageView.contentMode = .scaleAspectFill
         
         // check to see if the cell's gesture recognizer is nil
         if cell.gestureRecognizers == nil {
@@ -315,7 +316,7 @@ class MemoriesViewController: UICollectionViewController {
                 try fm.moveItem(at: recordingURL, to: audioMemoryURL)
                 
                 // kick-off the transcription
-                transcriptionURL(for: audioMemoryURL)
+                transcribeAudio(memory: audioMemoryURL)
             } catch let error {
                 print("Failure Finishing Recording: \(error)")
             }
@@ -326,7 +327,34 @@ class MemoriesViewController: UICollectionViewController {
     // Responsible for transcribing narration into text and linking to the memory
     
     func transcribeAudio(memory: URL) {
-        print("transcribing audio.")
+        // get path to where audio is, and where the transcription should be
+        let audio = audioURL(for: memory)
+        let transcription = transcriptionURL(for: memory)
+        
+        // create a new recognizer and point it at our audio
+        let recognizer = SFSpeechRecognizer()
+        let request = SFSpeechURLRecognitionRequest(url: audio)
+        
+        // start recognition
+        recognizer?.recognitionTask(with: request) { [unowned self] (result, error) in
+            // abort if we didn't get any transcription back
+            guard let result = result else {
+                print("Audio Transcription Error: \(error!)")
+                return
+            }
+            
+            // if we received the final transcription - write to disk
+            if result.isFinal {
+                // pull out the best transcription 
+                let text = result.bestTranscription.formattedString
+                // and write it to disk with the correct filename for memory linking
+                do {
+                    try text.write(to: transcription, atomically: true, encoding: .utf8)
+                } catch {
+                    print("Save Transcription Error.")
+                }
+            }
+        }
     }
 
 }
