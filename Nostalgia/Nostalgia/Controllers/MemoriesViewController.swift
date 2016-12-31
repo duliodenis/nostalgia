@@ -11,6 +11,7 @@ import AVFoundation // Microphone Access
 import Photos       // Photo Library Access
 import Speech       // Speech Transcription
 
+
 class MemoriesViewController: UICollectionViewController {
     
     // array of URLs for the memories
@@ -21,6 +22,8 @@ class MemoriesViewController: UICollectionViewController {
     var audioRecorder: AVAudioRecorder?
     // the URL of the file used to record to
     var recordingURL: URL!
+    // an audio player for playback
+    var audioPlayer: AVAudioPlayer?
     
     
     // MARK: - View Lifecycle
@@ -194,6 +197,31 @@ class MemoriesViewController: UICollectionViewController {
     }
     
     
+    override func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        let memory = memories[indexPath.row]
+        
+        let fm = FileManager.default
+        
+        do {
+            let audioName = audioURL(for: memory)
+            let transcriptionName = transcriptionURL(for: memory)
+            
+            if fm.fileExists(atPath: audioName.path) {
+                audioPlayer = try AVAudioPlayer(contentsOf: audioName)
+                audioPlayer?.play()
+            }
+            
+            if fm.fileExists(atPath: transcriptionName.path) {
+                let contents = try String(contentsOf: transcriptionName)
+                
+                print(contents)
+            }
+        } catch {
+            print("Error loading audio.")
+        }
+    }
+    
+    
     // MARK: - Memory URL Helper Methods
     
     func imageURL(for memory: URL) -> URL {
@@ -266,6 +294,9 @@ class MemoriesViewController: UICollectionViewController {
     // Called to record the audio narration through the microphone
     
     func recordNarration() {
+        // if audio is playing - make sure to stop it
+        audioPlayer?.stop()
+        
         // set the background color to RED to indicate recording is ON
         collectionView?.backgroundColor = UIColor(red: 0.5, green: 0, blue: 0, alpha: 1)
         
@@ -304,7 +335,7 @@ class MemoriesViewController: UICollectionViewController {
         if success {
             do {
                 // create a URL out of the active memory URL + m4a extension
-                let audioMemoryURL = activeMemory.appendingPathComponent("m4a")
+                let audioMemoryURL = activeMemory.appendingPathExtension("m4a")
                 let fm = FileManager.default
                 
                 // delete existing recordings
