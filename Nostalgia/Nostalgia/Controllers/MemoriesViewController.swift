@@ -27,6 +27,10 @@ class MemoriesViewController: UICollectionViewController {
     var recordingURL: URL!
     // an audio player for playback
     var audioPlayer: AVAudioPlayer?
+    // a filtered array for search purposes
+    var filteredMemories = [URL]()
+    // the searchQuery object
+    var searchQuery: CSSearchQuery?
     
     
     // MARK: - View Lifecycle
@@ -106,6 +110,9 @@ class MemoriesViewController: UICollectionViewController {
             }
         }
         
+        // copy the memories to the filtered memories
+        filteredMemories = memories
+        
         // reload the list of memories
         collectionView?.reloadSections(IndexSet(integer: 1))
     }
@@ -163,7 +170,7 @@ class MemoriesViewController: UICollectionViewController {
         if section == 0 {
             return 0
         } else {
-            return memories.count
+            return filteredMemories.count
         }
     }
     
@@ -171,7 +178,7 @@ class MemoriesViewController: UICollectionViewController {
     override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "Memory", for: indexPath) as! MemoryCell
         
-        let memory = memories[indexPath.row]
+        let memory = filteredMemories[indexPath.row]
         let imageName = thumbnailURL(for: memory).path
         let image = UIImage.init(contentsOfFile: imageName)
         
@@ -201,7 +208,7 @@ class MemoriesViewController: UICollectionViewController {
     
     
     override func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        let memory = memories[indexPath.row]
+        let memory = filteredMemories[indexPath.row]
         
         let fm = FileManager.default
         
@@ -283,7 +290,7 @@ class MemoriesViewController: UICollectionViewController {
             // and derive the index
             if let index = collectionView?.indexPath(for: cell) {
                 // to set the active memory variable
-                activeMemory = memories[index.row]
+                activeMemory = filteredMemories[index.row]
                 // and start recording
                 recordNarration()
             }
@@ -417,6 +424,65 @@ class MemoriesViewController: UICollectionViewController {
             } else {
                 print("Search item successfully indexed: \(text)")
             }
+        }
+    }
+    
+    
+    // MARK: - SearchBar Delegate and Search Support Methods
+    
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        filteredMemories(text: searchText)
+    }
+    
+    
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        searchBar.resignFirstResponder()
+    }
+    
+    
+    func filteredMemories(text: String) {
+        // ensure the search text is not empty
+        guard text.characters.count > 0 else {
+            // if it is then reset the filteredMemories to the complete memories array
+            filteredMemories = memories
+            // and reload the collection view in a non animating block
+            UIView.performWithoutAnimation {
+                collectionView?.reloadSections(IndexSet(integer: 1))
+            }
+            // return since the search text is empty
+            return
+        }
+        
+        var allItems = [CSSearchableItem]()
+        
+        searchQuery?.cancel()
+        
+        let queryString = "contentDescription == \"*\(text)*\"c"
+        
+        searchQuery = CSSearchQuery(queryString: queryString, attributes: nil)
+        
+        searchQuery?.foundItemsHandler = { items in
+            allItems.append(contentsOf: items)
+        }
+        
+        searchQuery?.completionHandler = { error in
+            DispatchQueue.main.async { [unowned self] in
+                self.activateFilter(matches: allItems)
+            }
+        }
+    }
+    
+    
+    func activateFilter(matches: [CSSearchableItem]) {
+        // create a new filtered memories array by mapping the spotlight matches array results
+        filteredMemories = matches.map { item in
+            // convert to a fully formed file URL from its identifier which is the full path to the memory
+            return URL(fileURLWithPath: item.uniqueIdentifier)
+        }
+        
+        // reload in a non animated block to not fade in and out while the user is typing
+        UIView.performWithoutAnimation {
+            collectionView?.reloadSections(IndexSet(integer: 1))
         }
     }
 
